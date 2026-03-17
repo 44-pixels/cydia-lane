@@ -3,8 +3,7 @@
 require "simplecov"
 SimpleCov.start do
   add_filter "/spec/"
-  # Enforced at 100% once implementation specs exist (Task 2+)
-  minimum_coverage line: 0
+  minimum_coverage line: 100
 end
 
 require "fastlane"

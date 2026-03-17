@@ -189,6 +189,22 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       end
     end
 
+    context "when the server returns invalid JSON" do
+      it "raises CydiaError with an invalid JSON message" do
+        http_response = instance_double(Net::HTTPResponse, code: "200", body: "not valid json{{{")
+        http = instance_double(Net::HTTP)
+        allow(Net::HTTP).to receive(:new).and_return(http)
+        allow(http).to receive(:use_ssl=)
+        allow(http).to receive(:request).and_return(http_response)
+
+        expect {
+          client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
+        }.to raise_error(Fastlane::CydiaLane::CydiaError) { |error|
+          expect(error.message).to include("Invalid JSON response")
+        }
+      end
+    end
+
     context "multipart form body" do
       it "includes correct boundary, content-disposition, and file content" do
         http, = stub_upload_request(status: 200, body: build_response_body)

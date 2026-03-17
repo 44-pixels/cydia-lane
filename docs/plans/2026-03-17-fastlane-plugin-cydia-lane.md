@@ -137,13 +137,13 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
 **Files:**
 - Create: `.github/workflows/ci.yml`
 
-- [ ] Create GitHub Actions workflow:
+- [x] Create GitHub Actions workflow:
   - Trigger: push and pull_request
   - Matrix: ruby: ['3.4', '4.0']
   - Steps: checkout, setup ruby with bundler cache, bundle install, bundle exec rake (runs specs + rubocop)
-- [ ] Run full test suite (bundle exec rake spec)
-- [ ] Run linter (bundle exec rubocop)
-- [ ] Verify 100% test coverage from SimpleCov output
+- [x] Run full test suite (bundle exec rake spec)
+- [x] Run linter (bundle exec rubocop)
+- [x] Verify 100% test coverage from SimpleCov output
 
 ### Task 6: Verify acceptance criteria
 
