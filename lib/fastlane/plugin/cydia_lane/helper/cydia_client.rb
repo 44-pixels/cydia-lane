@@ -41,7 +41,8 @@ module Fastlane
       private
 
       def build_uri(app_slug)
-        URI.parse("#{@base_url}/api/public/v1/apps/#{app_slug}/builds")
+        encoded_slug = URI.encode_www_form_component(app_slug)
+        URI.parse("#{@base_url}/api/public/v1/apps/#{encoded_slug}/builds")
       end
 
       def auth_header
@@ -102,7 +103,7 @@ module Fastlane
       end
 
       def file_part(boundary, name, path)
-        filename = File.basename(path)
+        filename = File.basename(path).gsub(/["\r\n]/, "_")
         content = File.binread(path)
 
         header = "--#{boundary}\r\n" \

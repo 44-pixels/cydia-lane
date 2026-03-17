@@ -64,8 +64,7 @@ module Fastlane
             key: :base_url,
             env_name: "CYDIA_BASE_URL",
             description: "Base URL of the Cydia API",
-            type: String,
-            default_value: "https://cydia.example.com"
+            type: String
           ),
           FastlaneCore::ConfigItem.new(
             key: :platform,

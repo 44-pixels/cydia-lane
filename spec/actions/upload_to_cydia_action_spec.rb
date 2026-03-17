@@ -280,9 +280,9 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       expect(described_class.authors).to be_an(Array)
     end
 
-    it "supports ios and android" do
+    it "supports ios only (android upload not yet supported)" do
       expect(described_class.is_supported?(:ios)).to be true
-      expect(described_class.is_supported?(:android)).to be true
+      expect(described_class.is_supported?(:android)).to be false
       expect(described_class.is_supported?(:mac)).to be false
     end
   end
