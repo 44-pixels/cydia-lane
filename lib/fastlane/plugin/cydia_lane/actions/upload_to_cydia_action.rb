@@ -14,8 +14,9 @@ module Fastlane
           api_token: params[:api_token]
         )
 
-        platform = params[:platform] || Actions.lane_context[Actions::SharedValues::PLATFORM_NAME]&.to_s
+        platform = (params[:platform] || Actions.lane_context[Actions::SharedValues::PLATFORM_NAME])&.to_s&.downcase
         UI.user_error!("Could not determine platform. Provide :platform or run within a platform block.") if platform.nil? || platform.empty?
+        UI.user_error!("Platform must be 'ios' or 'android', got '#{platform}'") unless %w[ios android].include?(platform)
 
         file_path = params[:file] || detect_file(platform)
         UI.user_error!("No build file found. Provide :file or run build_app/gradle first.") unless file_path

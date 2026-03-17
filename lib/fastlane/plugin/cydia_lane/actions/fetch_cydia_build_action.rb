@@ -9,11 +9,14 @@ module Fastlane
           api_token: params[:api_token]
         )
 
-        UI.message("Fetching build from Cydia (#{params[:app_slug]}, #{params[:platform]}, #{params[:target]}, #{params[:version]})...")
+        platform = params[:platform].to_s.downcase
+        UI.user_error!("Platform must be 'ios' or 'android', got '#{platform}'") unless %w[ios android].include?(platform)
+
+        UI.message("Fetching build from Cydia (#{params[:app_slug]}, #{platform}, #{params[:target]}, #{params[:version]})...")
 
         result = client.fetch_build(
           app_slug: params[:app_slug],
-          platform: params[:platform],
+          platform: platform,
           target: params[:target],
           version: params[:version]
         )

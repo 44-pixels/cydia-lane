@@ -9,7 +9,7 @@ module Fastlane
   module CydiaLane
     class CydiaClient
       def initialize(base_url:, api_token:)
-        @base_url = base_url
+        @base_url = base_url.chomp("/")
         @api_token = api_token
       end
 
