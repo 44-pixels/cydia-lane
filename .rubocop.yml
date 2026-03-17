@@ -4,7 +4,7 @@ inherit_gem:
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
-  CacheRootDirectory: /workspace/.rubocop-cache
+  CacheRootDirectory: .rubocop-cache
   Exclude:
     - ".ruby-local/**/*"
     - "vendor/**/*"

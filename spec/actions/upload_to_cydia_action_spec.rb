@@ -174,7 +174,6 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
 
   describe "platform auto-detection from lane context" do
     it "auto-detects platform from PLATFORM_NAME when :platform is not provided" do
-      Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::PLATFORM_NAME] = :ios
       Fastlane::Actions.lane_context[:IPA_OUTPUT_PATH] = ipa_file.path
 
       client = stub_client_upload(build_response)
@@ -187,7 +186,11 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         source_map_path: nil
       ).and_return(build_response)
 
-      run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}'")
+      Fastlane::FastFile.new.parse("platform :ios do
+        lane :test do
+          upload_to_cydia(api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}')
+        end
+      end").runner.execute(:test, :ios)
     end
 
     it "raises an error when platform cannot be determined" do
