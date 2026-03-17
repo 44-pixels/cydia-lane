@@ -15,14 +15,20 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         "guid" => "build-guid-001",
         "bundleId" => "com.example.app",
         "platform" => "ios",
+        "target" => "release",
         "version" => "1.2.3",
-        "artefact" => {
-          "guid" => "artefact-guid-001",
-          "target" => "release",
-          "buildFileURL" => "https://cydia.example.com/builds/build-guid-001/app.ipa",
-          "symbolURL" => "https://cydia.example.com/builds/build-guid-001/app.dSYM.zip",
-          "reactSourceMapURL" => nil
-        }
+        "artifacts" => [
+          {
+            "guid" => "artifact-guid-001",
+            "slug" => "bundle",
+            "fileUrl" => "https://cydia.example.com/builds/build-guid-001/app.ipa"
+          },
+          {
+            "guid" => "artifact-guid-002",
+            "slug" => "symbol",
+            "fileUrl" => "https://cydia.example.com/builds/build-guid-001/app.dSYM.zip"
+          }
+        ]
       }
     }
   end
@@ -74,7 +80,7 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios'")
 
       expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_GUID]).to eq("build-guid-001")
-      expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_ARTIFACTS]).to eq(build_response.dig("build", "artefact"))
+      expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_ARTIFACTS]).to eq(build_response.dig("build", "artifacts"))
     end
   end
 
@@ -253,7 +259,7 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}'")
 
       expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_GUID]).to eq("build-guid-001")
-      expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_ARTIFACTS]).to eq(build_response.dig("build", "artefact"))
+      expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_ARTIFACTS]).to eq(build_response.dig("build", "artifacts"))
     end
   end
 

@@ -17,14 +17,20 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
         "guid" => "build-guid-001",
         "bundleId" => "com.example.app",
         "platform" => "ios",
+        "target" => "release",
         "version" => "1.2.3",
-        "artefact" => {
-          "guid" => "artefact-guid-001",
-          "target" => "release",
-          "buildFileURL" => "https://cydia.example.com/builds/build-guid-001/app.ipa",
-          "symbolURL" => "https://cydia.example.com/builds/build-guid-001/app.dSYM.zip",
-          "reactSourceMapURL" => nil
-        }
+        "artifacts" => [
+          {
+            "guid" => "artifact-guid-001",
+            "slug" => "bundle",
+            "fileUrl" => "https://cydia.example.com/builds/build-guid-001/app.ipa"
+          },
+          {
+            "guid" => "artifact-guid-002",
+            "slug" => "symbol",
+            "fileUrl" => "https://cydia.example.com/builds/build-guid-001/app.dSYM.zip"
+          }
+        ]
       }
     }
   end
