@@ -5,6 +5,7 @@ source "https://rubygems.org"
 gemspec
 
 group :development, :test do
+  gem "irb"
   gem "rspec"
   gem "simplecov", require: false
   gem "rubocop", require: false
