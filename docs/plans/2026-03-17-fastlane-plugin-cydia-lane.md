@@ -93,7 +93,7 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
 - Modify: `lib/fastlane/plugin/cydia_lane/actions/upload_to_cydia_action.rb`
 - Create: `spec/actions/upload_to_cydia_action_spec.rb`
 
-- [ ] Write RSpec tests:
+- [x] Write RSpec tests:
   - Successful iOS upload using auto-detected IPA from lane context (SharedValues::IPA_OUTPUT_PATH)
   - Successful Android upload using auto-detected artifact from lane context (SharedValues::GRADLE_APK_OUTPUT_PATH / GRADLE_AAB_OUTPUT_PATH)
   - Explicit file path parameter overrides auto-detection
@@ -101,7 +101,7 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
   - Missing file (no lane context, no explicit path) raises error
   - CydiaError from client is surfaced with UI.user_error!
   - Shared values CYDIA_BUILD_GUID is set after upload
-- [ ] Implement UploadToCydiaAction:
+- [x] Implement UploadToCydiaAction:
   - Parameters: api_token (env: CYDIA_API_TOKEN), app_slug (env: CYDIA_APP_SLUG), base_url (env: CYDIA_BASE_URL), platform (auto-detect from fastlane platform context), file (auto-detect from lane context), symbol_file, source_map_file
   - Auto-detect platform: use fastlane's current platform block (:ios / :android)
   - Auto-detect file: IPA_OUTPUT_PATH for iOS, GRADLE_APK_OUTPUT_PATH or GRADLE_AAB_OUTPUT_PATH for Android
@@ -109,8 +109,8 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
   - Set SharedValues::CYDIA_BUILD_GUID and CYDIA_BUILD_ARTIFACTS
   - Log upload result via UI.success
   - Full action metadata: description, available_options, output, return_value, authors, is_supported?
-- [ ] Run rspec -- all tests must pass
-- [ ] Run rubocop -- no offenses
+- [x] Run rspec -- all tests must pass
+- [x] Run rubocop -- no offenses
 
 ### Task 4: Implement fetch_cydia_build fastlane action
 
