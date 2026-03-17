@@ -154,5 +154,5 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
 
 ### Task 7: Update documentation
 
-- [ ] Update README.md with: gem description, installation instructions (Pluginfile or Gemfile), usage examples for upload_to_cydia and fetch_cydia_build, integration examples showing where to add the action in Karen/Voices-style Fastfiles
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Update README.md with: gem description, installation instructions (Pluginfile or Gemfile), usage examples for upload_to_cydia and fetch_cydia_build, integration examples showing where to add the action in Karen/Voices-style Fastfiles
+- [x] Move this plan to `docs/plans/completed/`
