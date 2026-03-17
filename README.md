@@ -74,10 +74,12 @@ fetch_cydia_build(
   app_slug: "my-app",
   base_url: "https://cydia.example.com",
   platform: "ios",
-  target: "release",
+  target: "device",
   version: "1.2.3"
 )
 ```
+
+For iOS builds, the backend derives the target from the IPA: `device` or `simulator`. Pass the appropriate value when fetching.
 
 Sets the same shared values as `upload_to_cydia` on success.
 
@@ -111,6 +113,10 @@ end
 
 ### Android deploy lane
 
+> **Note:** Android build processing is not yet supported by the Cydia backend.
+> The plugin will reject Android uploads locally with a clear error message
+> until backend support is added.
+
 ```ruby
 platform :android do
   lane :deploy do |options|
@@ -126,7 +132,7 @@ platform :android do
       release_status: "draft"
     )
 
-    # Upload to Cydia alongside Play Store
+    # Upload to Cydia alongside Play Store (pending backend support)
     upload_to_cydia(
       app_slug: "my-app",
       platform: "android"
@@ -142,7 +148,7 @@ lane :check_build do
   result = fetch_cydia_build(
     app_slug: "my-app",
     platform: "ios",
-    target: "release",
+    target: "device",
     version: "1.2.3"
   )
 

@@ -17,10 +17,16 @@ module Fastlane
         platform = (params[:platform] || Actions.lane_context[Actions::SharedValues::PLATFORM_NAME])&.to_s&.downcase
         UI.user_error!("Could not determine platform. Provide :platform or run within a platform block.") if platform.nil? || platform.empty?
         UI.user_error!("Platform must be 'ios' or 'android', got '#{platform}'") unless %w[ios android].include?(platform)
+        UI.user_error!("Android build processing is not yet supported by the Cydia backend. Uploads will be rejected server-side.") if platform == "android"
 
         file_path = params[:file] || detect_file(platform)
         UI.user_error!("No build file found. Provide :file or run build_app/gradle first.") unless file_path
-        UI.user_error!("Build file not found: #{file_path}") unless File.exist?(file_path)
+        validate_file_path!(file_path, "Build file")
+
+        symbol_file = params[:symbol_file]
+        source_map_file = params[:source_map_file]
+        validate_file_path!(symbol_file, "Symbol file") if symbol_file
+        validate_file_path!(source_map_file, "Source map file") if source_map_file
 
         UI.message("Uploading #{file_path} to Cydia (#{params[:app_slug]}, #{platform})...")
 
@@ -28,8 +34,8 @@ module Fastlane
           app_slug: params[:app_slug],
           platform: platform,
           bundle_path: file_path,
-          symbol_path: params[:symbol_file],
-          source_map_path: params[:source_map_file]
+          symbol_path: symbol_file,
+          source_map_path: source_map_file
         )
 
         build = result["build"]
@@ -42,6 +48,12 @@ module Fastlane
         result
       rescue CydiaLane::CydiaError => e
         UI.user_error!(e.message)
+      end
+
+      def self.validate_file_path!(path, label)
+        UI.user_error!("#{label} not found: #{path}") unless File.exist?(path)
+        UI.user_error!("#{label} is not a file: #{path}") unless File.file?(path)
+        UI.user_error!("#{label} is not readable: #{path}") unless File.readable?(path)
       end
 
       def self.detect_file(platform)

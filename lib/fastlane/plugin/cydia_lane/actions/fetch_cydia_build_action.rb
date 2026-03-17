@@ -74,7 +74,7 @@ module Fastlane
           ),
           FastlaneCore::ConfigItem.new(
             key: :target,
-            description: "Build target (e.g., release, debug)",
+            description: "Build target (e.g., device, simulator)",
             type: String
           ),
           FastlaneCore::ConfigItem.new(

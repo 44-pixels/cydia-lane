@@ -84,64 +84,13 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
     end
   end
 
-  describe "successful Android upload using auto-detected artifact from lane context" do
-    let(:apk_file) { Tempfile.new([ "app", ".apk" ]) }
+  describe "Android uploads are blocked until backend support is available" do
+    it "raises an error when platform is android" do
+      stub_client_upload(build_response)
 
-    before do
-      apk_file.write("fake-apk-content")
-      apk_file.rewind
-    end
-
-    after do
-      apk_file.close
-      apk_file.unlink
-    end
-
-    it "uploads the APK from lane context :GRADLE_APK_OUTPUT_PATH" do
-      Fastlane::Actions.lane_context[:GRADLE_APK_OUTPUT_PATH] = apk_file.path
-
-      android_response = build_response.dup
-      android_response["build"] = android_response["build"].merge("platform" => "android")
-
-      client = stub_client_upload(android_response)
-
-      expect(client).to receive(:upload_build).with(
-        app_slug: app_slug,
-        platform: "android",
-        bundle_path: apk_file.path,
-        symbol_path: nil,
-        source_map_path: nil
-      ).and_return(android_response)
-
-      run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'android'")
-
-      expect(Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::CYDIA_BUILD_GUID]).to eq("build-guid-001")
-    end
-
-    it "falls back to GRADLE_AAB_OUTPUT_PATH when no APK is available" do
-      aab_file = Tempfile.new([ "app", ".aab" ])
-      aab_file.write("fake-aab-content")
-      aab_file.rewind
-
-      Fastlane::Actions.lane_context[:GRADLE_AAB_OUTPUT_PATH] = aab_file.path
-
-      android_response = build_response.dup
-      android_response["build"] = android_response["build"].merge("platform" => "android")
-
-      client = stub_client_upload(android_response)
-
-      expect(client).to receive(:upload_build).with(
-        app_slug: app_slug,
-        platform: "android",
-        bundle_path: aab_file.path,
-        symbol_path: nil,
-        source_map_path: nil
-      ).and_return(android_response)
-
-      run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'android'")
-
-      aab_file.close
-      aab_file.unlink
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'android', file: '#{ipa_file.path}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Android build processing is not yet supported/)
     end
   end
 
@@ -238,6 +187,50 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
     end
   end
 
+  describe "invalid optional file paths raise errors" do
+    it "raises an error when symbol_file does not exist" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', symbol_file: '/nonexistent/path/app.dSYM.zip'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Symbol file not found/)
+    end
+
+    it "raises an error when source_map_file does not exist" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', source_map_file: '/nonexistent/path/source.map'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Source map file not found/)
+    end
+  end
+
+  describe "directory paths are rejected" do
+    it "raises an error when file is a directory" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{Dir.tmpdir}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Build file is not a file/)
+    end
+
+    it "raises an error when symbol_file is a directory" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', symbol_file: '#{Dir.tmpdir}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Symbol file is not a file/)
+    end
+
+    it "raises an error when source_map_file is a directory" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', source_map_file: '#{Dir.tmpdir}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Source map file is not a file/)
+    end
+  end
+
   describe "CydiaError from client is surfaced with UI.user_error!" do
     it "surfaces CydiaError as a fastlane user error" do
       client = instance_double(Fastlane::CydiaLane::CydiaClient)
@@ -291,6 +284,18 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       expect(described_class.is_supported?(:ios)).to be true
       expect(described_class.is_supported?(:android)).to be true
       expect(described_class.is_supported?(:mac)).to be false
+    end
+  end
+
+  describe ".detect_file" do
+    it "returns GRADLE_APK_OUTPUT_PATH for android platform" do
+      Fastlane::Actions.lane_context[:GRADLE_APK_OUTPUT_PATH] = "/path/to/app.apk"
+      expect(described_class.detect_file("android")).to eq("/path/to/app.apk")
+    end
+
+    it "falls back to GRADLE_AAB_OUTPUT_PATH for android when no APK" do
+      Fastlane::Actions.lane_context[:GRADLE_AAB_OUTPUT_PATH] = "/path/to/app.aab"
+      expect(described_class.detect_file("android")).to eq("/path/to/app.aab")
     end
   end
 end
