@@ -51,11 +51,14 @@ module Fastlane
       def execute_request(uri, request)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = (uri.scheme == "https")
+        http.open_timeout = 30
+        http.read_timeout = 300
+        http.write_timeout = 300
 
         response = http.request(request)
         handle_response(response)
       rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ETIMEDOUT,
-             SocketError, Net::OpenTimeout, Net::ReadTimeout => e
+             SocketError, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout => e
         raise CydiaError, "Network error: #{e.message}"
       end
 

@@ -34,6 +34,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     http = instance_double(Net::HTTP)
     allow(Net::HTTP).to receive(:new).and_return(http)
     allow(http).to receive(:use_ssl=)
+    allow(http).to receive(:open_timeout=)
+    allow(http).to receive(:read_timeout=)
+    allow(http).to receive(:write_timeout=)
     allow(http).to receive(:request).and_return(http_response)
     [ http, http_response ]
   end
@@ -185,6 +188,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
         http = instance_double(Net::HTTP)
         allow(Net::HTTP).to receive(:new).and_return(http)
         allow(http).to receive(:use_ssl=)
+        allow(http).to receive(:open_timeout=)
+        allow(http).to receive(:read_timeout=)
+        allow(http).to receive(:write_timeout=)
         allow(http).to receive(:request).and_raise(Errno::ECONNREFUSED, "Connection refused")
 
         expect {
@@ -198,6 +204,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
         http = instance_double(Net::HTTP)
         allow(Net::HTTP).to receive(:new).and_return(http)
         allow(http).to receive(:use_ssl=)
+        allow(http).to receive(:open_timeout=)
+        allow(http).to receive(:read_timeout=)
+        allow(http).to receive(:write_timeout=)
         allow(http).to receive(:request).and_raise(Net::ReadTimeout, "Net::ReadTimeout")
 
         expect {
@@ -214,6 +223,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
         http = instance_double(Net::HTTP)
         allow(Net::HTTP).to receive(:new).and_return(http)
         allow(http).to receive(:use_ssl=)
+        allow(http).to receive(:open_timeout=)
+        allow(http).to receive(:read_timeout=)
+        allow(http).to receive(:write_timeout=)
         allow(http).to receive(:request).and_return(http_response)
 
         expect {
@@ -279,6 +291,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       http = instance_double(Net::HTTP)
       allow(Net::HTTP).to receive(:new).with("cydia.example.com", 443).and_return(http)
       expect(http).to receive(:use_ssl=).with(true)
+      allow(http).to receive(:open_timeout=)
+      allow(http).to receive(:read_timeout=)
+      allow(http).to receive(:write_timeout=)
       allow(http).to receive(:request).and_return(
         instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
       )
@@ -384,6 +399,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
         http = instance_double(Net::HTTP)
         allow(Net::HTTP).to receive(:new).and_return(http)
         allow(http).to receive(:use_ssl=)
+        allow(http).to receive(:open_timeout=)
+        allow(http).to receive(:read_timeout=)
+        allow(http).to receive(:write_timeout=)
         allow(http).to receive(:request).and_raise(SocketError, "getaddrinfo: Name or service not known")
 
         expect {

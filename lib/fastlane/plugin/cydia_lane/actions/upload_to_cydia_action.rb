@@ -15,10 +15,11 @@ module Fastlane
         )
 
         platform = params[:platform] || Actions.lane_context[Actions::SharedValues::PLATFORM_NAME]&.to_s
-        UI.user_error!("Could not determine platform. Provide :platform or run within a platform block.") unless platform
+        UI.user_error!("Could not determine platform. Provide :platform or run within a platform block.") if platform.nil? || platform.empty?
 
         file_path = params[:file] || detect_file(platform)
         UI.user_error!("No build file found. Provide :file or run build_app/gradle first.") unless file_path
+        UI.user_error!("Build file not found: #{file_path}") unless File.exist?(file_path)
 
         UI.message("Uploading #{file_path} to Cydia (#{params[:app_slug]}, #{platform})...")
 

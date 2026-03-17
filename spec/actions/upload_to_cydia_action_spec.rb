@@ -222,6 +222,14 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios'")
       }.to raise_error(FastlaneCore::Interface::FastlaneError, /No build file found/)
     end
+
+    it "raises an error when the specified file does not exist on disk" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '/nonexistent/path/app.ipa'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Build file not found/)
+    end
   end
 
   describe "CydiaError from client is surfaced with UI.user_error!" do
