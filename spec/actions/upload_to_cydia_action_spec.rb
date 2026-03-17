@@ -74,7 +74,8 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         platform: "ios",
         bundle_path: ipa_file.path,
         symbol_path: nil,
-        source_map_path: nil
+        source_map_path: nil,
+        backdoors_path: nil
       ).and_return(build_response)
 
       run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios'")
@@ -84,13 +85,20 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
     end
   end
 
-  describe "Android uploads are blocked until backend support is available" do
-    it "raises an error when platform is android" do
-      stub_client_upload(build_response)
+  describe "successful Android upload" do
+    it "uploads an APK file" do
+      client = stub_client_upload(build_response)
 
-      expect {
-        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'android', file: '#{ipa_file.path}'")
-      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Android build processing is not yet supported/)
+      expect(client).to receive(:upload_build).with(
+        app_slug: app_slug,
+        platform: "android",
+        bundle_path: ipa_file.path,
+        symbol_path: nil,
+        source_map_path: nil,
+        backdoors_path: nil
+      ).and_return(build_response)
+
+      run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'android', file: '#{ipa_file.path}'")
     end
   end
 
@@ -106,7 +114,8 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         platform: "ios",
         bundle_path: ipa_file.path,
         symbol_path: nil,
-        source_map_path: nil
+        source_map_path: nil,
+        backdoors_path: nil
       ).and_return(build_response)
 
       run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}'")
@@ -138,7 +147,8 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         platform: "ios",
         bundle_path: ipa_file.path,
         symbol_path: nil,
-        source_map_path: nil
+        source_map_path: nil,
+        backdoors_path: nil
       ).and_return(build_response)
 
       Fastlane::FastFile.new.parse("platform :ios do
@@ -203,6 +213,14 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
         run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', source_map_file: '/nonexistent/path/source.map'")
       }.to raise_error(FastlaneCore::Interface::FastlaneError, /Source map file not found/)
     end
+
+    it "raises an error when backdoors_file does not exist" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', backdoors_file: '/nonexistent/path/backdoors.json'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Backdoors file not found/)
+    end
   end
 
   describe "directory paths are rejected" do
@@ -228,6 +246,14 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       expect {
         run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', source_map_file: '#{Dir.tmpdir}'")
       }.to raise_error(FastlaneCore::Interface::FastlaneError, /Source map file is not a file/)
+    end
+
+    it "raises an error when backdoors_file is a directory" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}', backdoors_file: '#{Dir.tmpdir}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Backdoors file is not a file/)
     end
   end
 
@@ -280,9 +306,9 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       expect(described_class.authors).to be_an(Array)
     end
 
-    it "supports ios only (android upload not yet supported)" do
+    it "supports ios and android" do
       expect(described_class.is_supported?(:ios)).to be true
-      expect(described_class.is_supported?(:android)).to be false
+      expect(described_class.is_supported?(:android)).to be true
       expect(described_class.is_supported?(:mac)).to be false
     end
   end

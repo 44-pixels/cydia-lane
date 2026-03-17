@@ -17,7 +17,6 @@ module Fastlane
         platform = (params[:platform] || Actions.lane_context[Actions::SharedValues::PLATFORM_NAME])&.to_s&.downcase
         UI.user_error!("Could not determine platform. Provide :platform or run within a platform block.") if platform.nil? || platform.empty?
         UI.user_error!("Platform must be 'ios' or 'android', got '#{platform}'") unless %w[ios android].include?(platform)
-        UI.user_error!("Android build processing is not yet supported by the Cydia backend. Uploads will be rejected server-side.") if platform == "android"
 
         file_path = params[:file] || detect_file(platform)
         UI.user_error!("No build file found. Provide :file or run build_app/gradle first.") unless file_path
@@ -25,8 +24,10 @@ module Fastlane
 
         symbol_file = params[:symbol_file]
         source_map_file = params[:source_map_file]
+        backdoors_file = params[:backdoors_file]
         validate_file_path!(symbol_file, "Symbol file") if symbol_file
         validate_file_path!(source_map_file, "Source map file") if source_map_file
+        validate_file_path!(backdoors_file, "Backdoors file") if backdoors_file
 
         UI.message("Uploading #{file_path} to Cydia (#{params[:app_slug]}, #{platform})...")
 
@@ -35,7 +36,8 @@ module Fastlane
           platform: platform,
           bundle_path: file_path,
           symbol_path: symbol_file,
-          source_map_path: source_map_file
+          source_map_path: source_map_file,
+          backdoors_path: backdoors_file
         )
 
         build = result["build"]
@@ -123,6 +125,12 @@ module Fastlane
             description: "Path to the React Native source map file",
             type: String,
             optional: true
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :backdoors_file,
+            description: "Path to the backdoors JSON file",
+            type: String,
+            optional: true
           )
         ]
       end
@@ -135,7 +143,7 @@ module Fastlane
       end
 
       def self.is_supported?(platform)
-        platform == :ios
+        %i[ios android].include?(platform)
       end
     end
   end

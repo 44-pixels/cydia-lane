@@ -50,7 +50,8 @@ upload_to_cydia(
   platform: "ios",              # "ios" or "android"
   file: "path/to/build.ipa",   # optional, auto-detected from lane context
   symbol_file: "path/to/dSYM", # optional
-  source_map_file: "path/to/source-map.js.map" # optional
+  source_map_file: "path/to/source-map.js.map", # optional
+  backdoors_file: "path/to/backdoors.json" # optional
 )
 ```
 
@@ -113,16 +114,12 @@ end
 
 ### Android deploy lane
 
-> **Note:** Android build processing is not yet supported by the Cydia backend.
-> The plugin will reject Android uploads locally with a clear error message
-> until backend support is added.
-
 ```ruby
 platform :android do
   lane :deploy do |options|
     application_id = options[:application_id]
 
-    gradle(task: "bundleRelease", project_dir: "./android")
+    gradle(task: "assembleRelease", project_dir: "./android")
 
     # Upload to Google Play
     upload_to_play_store(
@@ -132,7 +129,7 @@ platform :android do
       release_status: "draft"
     )
 
-    # Upload to Cydia alongside Play Store (pending backend support)
+    # Upload to Cydia alongside Play Store
     upload_to_cydia(
       app_slug: "my-app",
       platform: "android"

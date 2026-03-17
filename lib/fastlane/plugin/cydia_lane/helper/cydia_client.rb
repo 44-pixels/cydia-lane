@@ -13,11 +13,11 @@ module Fastlane
         @api_token = api_token
       end
 
-      def upload_build(app_slug:, platform:, bundle_path:, symbol_path: nil, source_map_path: nil)
+      def upload_build(app_slug:, platform:, bundle_path:, symbol_path: nil, source_map_path: nil, backdoors_path: nil)
         uri = build_uri(app_slug)
         boundary = "----FastlanePluginCydiaLane#{SecureRandom.hex(16)}"
 
-        body = build_multipart_body(boundary, platform, bundle_path, symbol_path, source_map_path)
+        body = build_multipart_body(boundary, platform, bundle_path, symbol_path, source_map_path, backdoors_path)
 
         request = Net::HTTP::Post.new(uri.request_uri)
         request["Authorization"] = auth_header
@@ -84,13 +84,14 @@ module Fastlane
         )
       end
 
-      def build_multipart_body(boundary, platform, bundle_path, symbol_path, source_map_path)
+      def build_multipart_body(boundary, platform, bundle_path, symbol_path, source_map_path, backdoors_path)
         parts = []
 
         parts << text_part(boundary, "platform", platform)
         parts << file_part(boundary, "bundle", bundle_path)
         parts << file_part(boundary, "symbol", symbol_path) if symbol_path
         parts << file_part(boundary, "reactSourceMap", source_map_path) if source_map_path
+        parts << file_part(boundary, "backdoors", backdoors_path) if backdoors_path
 
         (parts.join + "--#{boundary}--\r\n").force_encoding(Encoding::BINARY)
       end

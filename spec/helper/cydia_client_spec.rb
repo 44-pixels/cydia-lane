@@ -135,6 +135,38 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       end
     end
 
+    context "with optional backdoors file" do
+      let(:backdoors_file) { Tempfile.new([ "backdoors", ".json" ]) }
+
+      before do
+        backdoors_file.write('{"backdoors": []}')
+        backdoors_file.rewind
+      end
+
+      after do
+        backdoors_file.close
+        backdoors_file.unlink
+      end
+
+      it "includes backdoors in the upload" do
+        http, = stub_http_request(status: 200, body: build_response_body)
+
+        expect(http).to receive(:request) do |request|
+          body = request.body
+          expect(body).to include("backdoors")
+          expect(body).to include('{"backdoors": []}')
+          instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
+        end
+
+        client.upload_build(
+          app_slug: app_slug,
+          platform: "ios",
+          bundle_path: bundle_file.path,
+          backdoors_path: backdoors_file.path
+        )
+      end
+    end
+
     context "when the server returns 401 (auth failure)" do
       it "raises CydiaError with status code and response body" do
         error_body = { "error" => "unauthorized" }
