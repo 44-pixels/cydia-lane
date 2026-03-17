@@ -3,6 +3,7 @@
 require "net/http"
 require "uri"
 require "json"
+require "securerandom"
 
 module Fastlane
   module CydiaLane
@@ -60,7 +61,7 @@ module Fastlane
 
       def handle_response(response)
         status = response.code.to_i
-        body = JSON.parse(response.body)
+        body = JSON.parse(response.body.to_s)
 
         unless (200..299).cover?(status)
           error_message = body["error"] || "HTTP #{status}"
@@ -87,25 +88,25 @@ module Fastlane
         parts << file_part(boundary, "symbol", symbol_path) if symbol_path
         parts << file_part(boundary, "reactSourceMap", source_map_path) if source_map_path
 
-        "#{parts.join}--#{boundary}--\r\n"
+        (parts.join + "--#{boundary}--\r\n").force_encoding(Encoding::BINARY)
       end
 
       def text_part(boundary, name, value)
-        "--#{boundary}\r\n" \
+        ("--#{boundary}\r\n" \
           "Content-Disposition: form-data; name=\"#{name}\"\r\n" \
           "\r\n" \
-          "#{value}\r\n"
+          "#{value}\r\n").b
       end
 
       def file_part(boundary, name, path)
         filename = File.basename(path)
         content = File.binread(path)
 
-        "--#{boundary}\r\n" \
+        header = "--#{boundary}\r\n" \
           "Content-Disposition: form-data; name=\"#{name}\"; filename=\"#{filename}\"\r\n" \
           "Content-Type: application/octet-stream\r\n" \
-          "\r\n" \
-          "#{content}\r\n"
+          "\r\n"
+        header.force_encoding(Encoding::BINARY) + content + "\r\n".b
       end
     end
   end

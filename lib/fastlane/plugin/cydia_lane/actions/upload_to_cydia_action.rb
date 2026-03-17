@@ -14,20 +14,25 @@ module Fastlane
           api_token: params[:api_token]
         )
 
-        file_path = params[:file] || detect_file(params[:platform])
+        platform = params[:platform] || Actions.lane_context[Actions::SharedValues::PLATFORM_NAME]&.to_s
+        UI.user_error!("Could not determine platform. Provide :platform or run within a platform block.") unless platform
+
+        file_path = params[:file] || detect_file(platform)
         UI.user_error!("No build file found. Provide :file or run build_app/gradle first.") unless file_path
 
-        UI.message("Uploading #{file_path} to Cydia (#{params[:app_slug]}, #{params[:platform]})...")
+        UI.message("Uploading #{file_path} to Cydia (#{params[:app_slug]}, #{platform})...")
 
         result = client.upload_build(
           app_slug: params[:app_slug],
-          platform: params[:platform],
+          platform: platform,
           bundle_path: file_path,
           symbol_path: params[:symbol_file],
           source_map_path: params[:source_map_file]
         )
 
         build = result["build"]
+        UI.user_error!("Unexpected API response: missing 'build' key") unless build
+
         Actions.lane_context[SharedValues::CYDIA_BUILD_GUID] = build["guid"]
         Actions.lane_context[SharedValues::CYDIA_BUILD_ARTIFACTS] = build["artefact"]
 

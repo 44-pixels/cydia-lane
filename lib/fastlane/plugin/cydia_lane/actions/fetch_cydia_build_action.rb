@@ -19,6 +19,8 @@ module Fastlane
         )
 
         build = result["build"]
+        UI.user_error!("Unexpected API response: missing 'build' key") unless build
+
         Actions.lane_context[SharedValues::CYDIA_BUILD_GUID] = build["guid"]
         Actions.lane_context[SharedValues::CYDIA_BUILD_ARTIFACTS] = build["artefact"]
 

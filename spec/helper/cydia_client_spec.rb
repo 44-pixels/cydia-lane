@@ -29,16 +29,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     }
   end
 
-  def stub_upload_request(status:, body:)
-    http_response = instance_double(Net::HTTPResponse, code: status.to_s, body: JSON.generate(body))
-    http = instance_double(Net::HTTP)
-    allow(Net::HTTP).to receive(:new).and_return(http)
-    allow(http).to receive(:use_ssl=)
-    allow(http).to receive(:request).and_return(http_response)
-    [ http, http_response ]
-  end
-
-  def stub_get_request(status:, body:)
+  def stub_http_request(status:, body:)
     http_response = instance_double(Net::HTTPResponse, code: status.to_s, body: JSON.generate(body))
     http = instance_double(Net::HTTP)
     allow(Net::HTTP).to receive(:new).and_return(http)
@@ -62,7 +53,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "with a successful iOS upload" do
       it "returns the parsed build response" do
-        stub_upload_request(status: 200, body: build_response_body)
+        stub_http_request(status: 200, body: build_response_body)
 
         result = client.upload_build(
           app_slug: app_slug,
@@ -85,7 +76,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       let(:bundle_file) { Tempfile.new([ "app", ".apk" ]) }
 
       it "returns the parsed build response" do
-        stub_upload_request(status: 200, body: android_response)
+        stub_http_request(status: 200, body: android_response)
 
         result = client.upload_build(
           app_slug: app_slug,
@@ -116,7 +107,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       end
 
       it "includes symbol and source map in the upload" do
-        http, = stub_upload_request(status: 200, body: build_response_body)
+        http, = stub_http_request(status: 200, body: build_response_body)
 
         expect(http).to receive(:request) do |request|
           body = request.body
@@ -136,21 +127,23 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     context "when the server returns 401 (auth failure)" do
-      it "raises CydiaError with status code" do
-        stub_upload_request(status: 401, body: { "error" => "unauthorized" })
+      it "raises CydiaError with status code and response body" do
+        error_body = { "error" => "unauthorized" }
+        stub_http_request(status: 401, body: error_body)
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
         }.to raise_error(Fastlane::CydiaLane::CydiaError) { |error|
           expect(error.message).to include("401")
           expect(error.status_code).to eq(401)
+          expect(error.response_body).to eq(error_body)
         }
       end
     end
 
     context "when the server returns 404 (app not found)" do
       it "raises CydiaError with status code" do
-        stub_upload_request(status: 404, body: { "error" => "not found" })
+        stub_http_request(status: 404, body: { "error" => "not found" })
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -163,13 +156,26 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 422 (validation error)" do
       it "raises CydiaError with the error message" do
-        stub_upload_request(status: 422, body: { "error" => "platform is invalid" })
+        stub_http_request(status: 422, body: { "error" => "platform is invalid" })
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
         }.to raise_error(Fastlane::CydiaLane::CydiaError) { |error|
           expect(error.message).to include("platform is invalid")
           expect(error.status_code).to eq(422)
+        }
+      end
+    end
+
+    context "when the server returns an error without 'error' key" do
+      it "falls back to HTTP status in the error message" do
+        stub_http_request(status: 500, body: { "message" => "internal server error" })
+
+        expect {
+          client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
+        }.to raise_error(Fastlane::CydiaLane::CydiaError) { |error|
+          expect(error.message).to include("HTTP 500")
+          expect(error.status_code).to eq(500)
         }
       end
     end
@@ -185,6 +191,19 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
         }.to raise_error(Fastlane::CydiaLane::CydiaError) { |error|
           expect(error.message).to include("Connection refused")
+        }
+      end
+
+      it "handles read timeout errors" do
+        http = instance_double(Net::HTTP)
+        allow(Net::HTTP).to receive(:new).and_return(http)
+        allow(http).to receive(:use_ssl=)
+        allow(http).to receive(:request).and_raise(Net::ReadTimeout, "Net::ReadTimeout")
+
+        expect {
+          client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
+        }.to raise_error(Fastlane::CydiaLane::CydiaError) { |error|
+          expect(error.message).to include("Network error")
         }
       end
     end
@@ -207,7 +226,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "multipart form body" do
       it "includes correct boundary, content-disposition, and file content" do
-        http, = stub_upload_request(status: 200, body: build_response_body)
+        http, = stub_http_request(status: 200, body: build_response_body)
 
         expect(http).to receive(:request) do |request|
           content_type = request["Content-Type"]
@@ -235,7 +254,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     it "sends the correct authorization header" do
-      http, = stub_upload_request(status: 200, body: build_response_body)
+      http, = stub_http_request(status: 200, body: build_response_body)
 
       expect(http).to receive(:request) do |request|
         expect(request["Authorization"]).to eq('Token token="test-token-abc123"')
@@ -246,7 +265,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     it "posts to the correct endpoint path" do
-      http, = stub_upload_request(status: 200, body: build_response_body)
+      http, = stub_http_request(status: 200, body: build_response_body)
 
       expect(http).to receive(:request) do |request|
         expect(request.path).to eq("/api/public/v1/apps/my-app/builds")
@@ -271,7 +290,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
   describe "#fetch_build" do
     context "with a successful fetch" do
       it "returns the parsed build response" do
-        stub_get_request(status: 200, body: build_response_body)
+        stub_http_request(status: 200, body: build_response_body)
 
         result = client.fetch_build(
           app_slug: app_slug,
@@ -286,7 +305,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     it "sends query parameters in the request" do
-      http, = stub_get_request(status: 200, body: build_response_body)
+      http, = stub_http_request(status: 200, body: build_response_body)
 
       expect(http).to receive(:request) do |request|
         uri = URI.parse("https://cydia.example.com#{request.path}")
@@ -301,7 +320,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     it "sends the correct authorization header" do
-      http, = stub_get_request(status: 200, body: build_response_body)
+      http, = stub_http_request(status: 200, body: build_response_body)
 
       expect(http).to receive(:request) do |request|
         expect(request["Authorization"]).to eq('Token token="test-token-abc123"')
@@ -312,7 +331,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     it "uses GET to the correct endpoint" do
-      http, = stub_get_request(status: 200, body: build_response_body)
+      http, = stub_http_request(status: 200, body: build_response_body)
 
       expect(http).to receive(:request) do |request|
         expect(request).to be_a(Net::HTTP::Get)
@@ -325,7 +344,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 401" do
       it "raises CydiaError" do
-        stub_get_request(status: 401, body: { "error" => "unauthorized" })
+        stub_http_request(status: 401, body: { "error" => "unauthorized" })
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
@@ -337,7 +356,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 404" do
       it "raises CydiaError" do
-        stub_get_request(status: 404, body: { "error" => "not found" })
+        stub_http_request(status: 404, body: { "error" => "not found" })
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
@@ -349,7 +368,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 422" do
       it "raises CydiaError with the error message" do
-        stub_get_request(status: 422, body: { "error" => "version is required" })
+        stub_http_request(status: 422, body: { "error" => "version is required" })
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")

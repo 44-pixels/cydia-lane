@@ -74,6 +74,18 @@ RSpec.describe Fastlane::Actions::FetchCydiaBuildAction do
     end
   end
 
+  describe "missing build key in API response" do
+    it "raises an error when response has no 'build' key" do
+      client = instance_double(Fastlane::CydiaLane::CydiaClient)
+      allow(Fastlane::CydiaLane::CydiaClient).to receive(:new).and_return(client)
+      allow(client).to receive(:fetch_build).and_return({ "status" => "ok" })
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', target: 'release', version: '1.2.3'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /missing 'build' key/)
+    end
+  end
+
   describe "missing required parameters raises error" do
     it "raises an error when api_token is missing" do
       expect {

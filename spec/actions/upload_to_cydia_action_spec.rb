@@ -36,6 +36,7 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
     Fastlane::Actions.lane_context.delete(:IPA_OUTPUT_PATH)
     Fastlane::Actions.lane_context.delete(:GRADLE_APK_OUTPUT_PATH)
     Fastlane::Actions.lane_context.delete(:GRADLE_AAB_OUTPUT_PATH)
+    Fastlane::Actions.lane_context.delete(Fastlane::Actions::SharedValues::PLATFORM_NAME)
   end
 
   after do
@@ -168,6 +169,45 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       expect {
         run_action("api_token: '#{api_token}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}'")
       }.to raise_error(FastlaneCore::Interface::FastlaneError)
+    end
+  end
+
+  describe "platform auto-detection from lane context" do
+    it "auto-detects platform from PLATFORM_NAME when :platform is not provided" do
+      Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::PLATFORM_NAME] = :ios
+      Fastlane::Actions.lane_context[:IPA_OUTPUT_PATH] = ipa_file.path
+
+      client = stub_client_upload(build_response)
+
+      expect(client).to receive(:upload_build).with(
+        app_slug: app_slug,
+        platform: "ios",
+        bundle_path: ipa_file.path,
+        symbol_path: nil,
+        source_map_path: nil
+      ).and_return(build_response)
+
+      run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}'")
+    end
+
+    it "raises an error when platform cannot be determined" do
+      stub_client_upload(build_response)
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', file: '#{ipa_file.path}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /Could not determine platform/)
+    end
+  end
+
+  describe "missing build key in API response" do
+    it "raises an error when response has no 'build' key" do
+      client = instance_double(Fastlane::CydiaLane::CydiaClient)
+      allow(Fastlane::CydiaLane::CydiaClient).to receive(:new).and_return(client)
+      allow(client).to receive(:upload_build).and_return({ "status" => "ok" })
+
+      expect {
+        run_action("api_token: '#{api_token}', app_slug: '#{app_slug}', base_url: '#{base_url}', platform: 'ios', file: '#{ipa_file.path}'")
+      }.to raise_error(FastlaneCore::Interface::FastlaneError, /missing 'build' key/)
     end
   end
 
