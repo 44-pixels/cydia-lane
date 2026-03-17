@@ -67,7 +67,7 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
 - Create: `lib/fastlane/plugin/cydia_lane/helper/cydia_error.rb`
 - Create: `spec/helper/cydia_client_spec.rb`
 
-- [ ] Write RSpec tests for CydiaClient:
+- [x] Write RSpec tests for CydiaClient:
   - Successful iOS build upload (mock HTTP 200 with build JSON response)
   - Successful Android build upload
   - Successful build fetch via GET
@@ -76,7 +76,7 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
   - Validation error (422) raises CydiaError
   - Network/connection errors raise CydiaError
   - Multipart form body includes correct boundary, content-disposition, and file content
-- [ ] Implement CydiaClient class:
+- [x] Implement CydiaClient class:
   - initialize(base_url:, api_token:)
   - upload_build(app_slug:, platform:, bundle_path:, symbol_path: nil, source_map_path: nil) -- POST multipart form
   - fetch_build(app_slug:, platform:, target:, version:) -- GET with query params
@@ -84,8 +84,8 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
   - Multipart form data built with Net::HTTP (no external deps)
   - Custom CydiaError class for API and network errors
   - JSON response parsing
-- [ ] Run rspec -- all tests must pass
-- [ ] Run rubocop -- no offenses
+- [x] Run rspec -- all tests must pass
+- [x] Run rubocop -- no offenses
 
 ### Task 3: Implement upload_to_cydia fastlane action
 
