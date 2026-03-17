@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "fastlane/plugin/cydia_lane"
+
+def reload!
+  Dir[File.expand_path("../lib/**/*.rb", __dir__)].each { |f| Kernel.load(f) }
+  puts "Reloaded!"
+end
+
+require "irb"
+IRB.start(__FILE__)
