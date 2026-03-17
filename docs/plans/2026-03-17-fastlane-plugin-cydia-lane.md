@@ -147,10 +147,10 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
 
 ### Task 6: Verify acceptance criteria
 
-- [ ] manual test: run bin/console, verify require loads correctly, verify reload! reloads lib files
-- [ ] run full test suite (bundle exec rake spec)
-- [ ] run linter (bundle exec rubocop)
-- [ ] verify test coverage meets 100%
+- [x] manual test: run bin/console, verify require loads correctly, verify reload! reloads lib files
+- [x] run full test suite (bundle exec rake spec)
+- [x] run linter (bundle exec rubocop)
+- [x] verify test coverage meets 100%
 
 ### Task 7: Update documentation
 
