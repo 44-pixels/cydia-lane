@@ -4,7 +4,28 @@ module Fastlane
   module Actions
     class FetchCydiaBuildAction < Action
       def self.run(params)
-        UI.message("fetch_cydia_build action is not yet implemented")
+        client = CydiaLane::CydiaClient.new(
+          base_url: params[:base_url],
+          api_token: params[:api_token]
+        )
+
+        UI.message("Fetching build from Cydia (#{params[:app_slug]}, #{params[:platform]}, #{params[:target]}, #{params[:version]})...")
+
+        result = client.fetch_build(
+          app_slug: params[:app_slug],
+          platform: params[:platform],
+          target: params[:target],
+          version: params[:version]
+        )
+
+        build = result["build"]
+        Actions.lane_context[SharedValues::CYDIA_BUILD_GUID] = build["guid"]
+        Actions.lane_context[SharedValues::CYDIA_BUILD_ARTIFACTS] = build["artefact"]
+
+        UI.success("Successfully fetched build from Cydia! Build GUID: #{build['guid']}")
+        result
+      rescue CydiaLane::CydiaError => e
+        UI.user_error!(e.message)
       end
 
       def self.description
@@ -15,8 +36,55 @@ module Fastlane
         [ "Cydia Team" ]
       end
 
+      def self.return_value
+        "Hash containing the build response from Cydia API"
+      end
+
       def self.available_options
-        []
+        [
+          FastlaneCore::ConfigItem.new(
+            key: :api_token,
+            env_name: "CYDIA_API_TOKEN",
+            description: "API token for Cydia authentication",
+            sensitive: true,
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :app_slug,
+            env_name: "CYDIA_APP_SLUG",
+            description: "The app slug identifier in Cydia",
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :base_url,
+            env_name: "CYDIA_BASE_URL",
+            description: "Base URL of the Cydia API",
+            type: String,
+            default_value: "https://cydia.example.com"
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :platform,
+            description: "Platform (ios or android)",
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :target,
+            description: "Build target (e.g., release, debug)",
+            type: String
+          ),
+          FastlaneCore::ConfigItem.new(
+            key: :version,
+            description: "Build version to fetch",
+            type: String
+          )
+        ]
+      end
+
+      def self.output
+        [
+          [ "CYDIA_BUILD_GUID", "The GUID of the fetched build" ],
+          [ "CYDIA_BUILD_ARTIFACTS", "The artifacts hash from the build response" ]
+        ]
       end
 
       def self.is_supported?(platform)

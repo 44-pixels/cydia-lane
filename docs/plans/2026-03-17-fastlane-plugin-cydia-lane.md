@@ -119,18 +119,18 @@ Create a Ruby gem (fastlane-plugin-cydia_lane) that provides two fastlane action
 - Modify: `lib/fastlane/plugin/cydia_lane.rb` (register new action)
 - Create: `spec/actions/fetch_cydia_build_action_spec.rb`
 
-- [ ] Write RSpec tests:
+- [x] Write RSpec tests:
   - Successful build fetch returns build hash
   - Build not found (404) raises UI.user_error!
   - Missing required parameters raises error
   - Shared values CYDIA_BUILD_GUID and CYDIA_BUILD_ARTIFACTS set on success
-- [ ] Implement FetchCydiaBuildAction:
+- [x] Implement FetchCydiaBuildAction:
   - Parameters: api_token, app_slug, base_url, platform, target, version
   - Call CydiaClient#fetch_build
   - Set shared values on success
   - Full action metadata
-- [ ] Run rspec -- all tests must pass
-- [ ] Run rubocop -- no offenses
+- [x] Run rspec -- all tests must pass
+- [x] Run rubocop -- no offenses
 
 ### Task 5: Set up CI and final verification
 
