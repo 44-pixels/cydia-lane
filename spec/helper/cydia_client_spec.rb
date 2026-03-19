@@ -36,7 +36,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
   end
 
   def json_response(status, body)
-    [status, { "Content-Type" => "application/json" }, JSON.generate(body)]
+    [ status, { "Content-Type" => "application/json" }, JSON.generate(body) ]
   end
 
   def use_test_adapter
@@ -273,7 +273,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     context "when the server returns invalid JSON" do
       it "raises CydiaError with an invalid JSON message" do
         stubs.post("/api/public/v1/apps/my-app/builds") do
-          [200, { "Content-Type" => "text/plain" }, "not valid json{{{"]
+          [ 200, { "Content-Type" => "text/plain" }, "not valid json{{{" ]
         end
 
         expect {
