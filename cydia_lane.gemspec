@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email         = [ "team@cydia.dev" ]
 
   spec.summary       = "Fastlane plugin for uploading builds to the Cydia backend"
-  spec.description   = "Provides upload_to_cydia and fetch_cydia_build actions for the Cydia build distribution platform."
+  spec.description   = "Provides the upload_to_cydia action for the Cydia build distribution platform."
   spec.homepage      = "https://github.com/cydia/fastlane-plugin-cydia_lane"
   spec.license       = "MIT"
 
@@ -22,4 +22,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "fastlane", ">= 2.225.0"
+  spec.add_dependency "faraday", "~> 1.0"
 end

@@ -63,8 +63,7 @@ module Fastlane
         when "ios"
           Actions.lane_context[:IPA_OUTPUT_PATH]
         when "android"
-          Actions.lane_context[:GRADLE_APK_OUTPUT_PATH] ||
-            Actions.lane_context[:GRADLE_AAB_OUTPUT_PATH]
+          Actions.lane_context[:GRADLE_APK_OUTPUT_PATH]
         end
       end
 
@@ -110,7 +109,7 @@ module Fastlane
           ),
           FastlaneCore::ConfigItem.new(
             key: :file,
-            description: "Path to the build file (IPA/APK/AAB). Auto-detected from lane context if not provided",
+            description: "Path to the build file (IPA/APK). Auto-detected from lane context if not provided",
             type: String,
             optional: true
           ),

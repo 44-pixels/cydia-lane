@@ -41,7 +41,6 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
     Fastlane::Actions.lane_context.delete(Fastlane::Actions::SharedValues::CYDIA_BUILD_ARTIFACTS)
     Fastlane::Actions.lane_context.delete(:IPA_OUTPUT_PATH)
     Fastlane::Actions.lane_context.delete(:GRADLE_APK_OUTPUT_PATH)
-    Fastlane::Actions.lane_context.delete(:GRADLE_AAB_OUTPUT_PATH)
     Fastlane::Actions.lane_context.delete(Fastlane::Actions::SharedValues::PLATFORM_NAME)
   end
 
@@ -319,9 +318,8 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
       expect(described_class.detect_file("android")).to eq("/path/to/app.apk")
     end
 
-    it "falls back to GRADLE_AAB_OUTPUT_PATH for android when no APK" do
-      Fastlane::Actions.lane_context[:GRADLE_AAB_OUTPUT_PATH] = "/path/to/app.aab"
-      expect(described_class.detect_file("android")).to eq("/path/to/app.aab")
+    it "returns nil for android when no APK is available" do
+      expect(described_class.detect_file("android")).to be_nil
     end
   end
 end

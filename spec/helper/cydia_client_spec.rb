@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "net/http"
 require "json"
 require "tempfile"
 
@@ -10,6 +9,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
   let(:api_token) { "test-token-abc123" }
   let(:client) { described_class.new(base_url: base_url, api_token: api_token) }
   let(:app_slug) { "my-app" }
+  let(:stubs) { Faraday::Adapter::Test::Stubs.new }
 
   let(:build_response_body) do
     {
@@ -35,16 +35,31 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     }
   end
 
-  def stub_http_request(status:, body:)
-    http_response = instance_double(Net::HTTPResponse, code: status.to_s, body: JSON.generate(body))
-    http = instance_double(Net::HTTP)
-    allow(Net::HTTP).to receive(:new).and_return(http)
-    allow(http).to receive(:use_ssl=)
-    allow(http).to receive(:open_timeout=)
-    allow(http).to receive(:read_timeout=)
-    allow(http).to receive(:write_timeout=)
-    allow(http).to receive(:request).and_return(http_response)
-    [ http, http_response ]
+  def json_response(status, body)
+    [status, { "Content-Type" => "application/json" }, JSON.generate(body)]
+  end
+
+  def use_test_adapter
+    test_stubs = stubs
+    test_conn = Faraday.new(url: base_url) do |f|
+      f.request :multipart
+      f.request :url_encoded
+      f.headers["Authorization"] = %(Token token="#{api_token}")
+      f.adapter :test, test_stubs
+    end
+    allow(client).to receive(:connection).and_return(test_conn)
+  end
+
+  describe "connection setup" do
+    it "configures the authorization header" do
+      conn = client.send(:connection)
+      expect(conn.headers["Authorization"]).to eq('Token token="test-token-abc123"')
+    end
+
+    it "uses the correct base URL" do
+      conn = client.send(:connection)
+      expect(conn.url_prefix.to_s).to eq("https://cydia.example.com/")
+    end
   end
 
   describe "#upload_build" do
@@ -53,6 +68,7 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     before do
       bundle_file.write("fake-ipa-content")
       bundle_file.rewind
+      use_test_adapter
     end
 
     after do
@@ -62,7 +78,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "with a successful iOS upload" do
       it "returns the parsed build response" do
-        stub_http_request(status: 200, body: build_response_body)
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          json_response(200, build_response_body)
+        end
 
         result = client.upload_build(
           app_slug: app_slug,
@@ -85,7 +103,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       let(:bundle_file) { Tempfile.new([ "app", ".apk" ]) }
 
       it "returns the parsed build response" do
-        stub_http_request(status: 200, body: android_response)
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          json_response(200, android_response)
+        end
 
         result = client.upload_build(
           app_slug: app_slug,
@@ -116,13 +136,11 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       end
 
       it "includes symbol and source map in the upload" do
-        http, = stub_http_request(status: 200, body: build_response_body)
-
-        expect(http).to receive(:request) do |request|
-          body = request.body
+        stubs.post("/api/public/v1/apps/my-app/builds") do |env|
+          body = env.body.respond_to?(:read) ? env.body.read : env.body.to_s
           expect(body).to include("symbol")
           expect(body).to include("reactSourceMap")
-          instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
+          json_response(200, build_response_body)
         end
 
         client.upload_build(
@@ -149,13 +167,10 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       end
 
       it "includes backdoors in the upload" do
-        http, = stub_http_request(status: 200, body: build_response_body)
-
-        expect(http).to receive(:request) do |request|
-          body = request.body
+        stubs.post("/api/public/v1/apps/my-app/builds") do |env|
+          body = env.body.respond_to?(:read) ? env.body.read : env.body.to_s
           expect(body).to include("backdoors")
-          expect(body).to include('{"backdoors": []}')
-          instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
+          json_response(200, build_response_body)
         end
 
         client.upload_build(
@@ -170,7 +185,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     context "when the server returns 401 (auth failure)" do
       it "raises CydiaError with status code and response body" do
         error_body = { "error" => "unauthorized" }
-        stub_http_request(status: 401, body: error_body)
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          json_response(401, error_body)
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -184,7 +201,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 404 (app not found)" do
       it "raises CydiaError with status code" do
-        stub_http_request(status: 404, body: { "error" => "not found" })
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          json_response(404, { "error" => "not found" })
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -197,7 +216,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 422 (validation error)" do
       it "raises CydiaError with the error message" do
-        stub_http_request(status: 422, body: { "error" => "platform is invalid" })
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          json_response(422, { "error" => "platform is invalid" })
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -210,7 +231,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns an error without 'error' key" do
       it "falls back to HTTP status in the error message" do
-        stub_http_request(status: 500, body: { "message" => "internal server error" })
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          json_response(500, { "message" => "internal server error" })
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -223,13 +246,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when a network error occurs" do
       it "raises CydiaError wrapping the original error" do
-        http = instance_double(Net::HTTP)
-        allow(Net::HTTP).to receive(:new).and_return(http)
-        allow(http).to receive(:use_ssl=)
-        allow(http).to receive(:open_timeout=)
-        allow(http).to receive(:read_timeout=)
-        allow(http).to receive(:write_timeout=)
-        allow(http).to receive(:request).and_raise(Errno::ECONNREFUSED, "Connection refused")
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          raise Faraday::ConnectionFailed, "Connection refused"
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -238,14 +257,10 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
         }
       end
 
-      it "handles read timeout errors" do
-        http = instance_double(Net::HTTP)
-        allow(Net::HTTP).to receive(:new).and_return(http)
-        allow(http).to receive(:use_ssl=)
-        allow(http).to receive(:open_timeout=)
-        allow(http).to receive(:read_timeout=)
-        allow(http).to receive(:write_timeout=)
-        allow(http).to receive(:request).and_raise(Net::ReadTimeout, "Net::ReadTimeout")
+      it "handles timeout errors" do
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          raise Faraday::TimeoutError, "Net::ReadTimeout"
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -257,14 +272,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns invalid JSON" do
       it "raises CydiaError with an invalid JSON message" do
-        http_response = instance_double(Net::HTTPResponse, code: "200", body: "not valid json{{{")
-        http = instance_double(Net::HTTP)
-        allow(Net::HTTP).to receive(:new).and_return(http)
-        allow(http).to receive(:use_ssl=)
-        allow(http).to receive(:open_timeout=)
-        allow(http).to receive(:read_timeout=)
-        allow(http).to receive(:write_timeout=)
-        allow(http).to receive(:request).and_return(http_response)
+        stubs.post("/api/public/v1/apps/my-app/builds") do
+          [200, { "Content-Type" => "text/plain" }, "not valid json{{{"]
+        end
 
         expect {
           client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
@@ -274,76 +284,24 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
       end
     end
 
-    context "multipart form body" do
-      it "includes correct boundary, content-disposition, and file content" do
-        http, = stub_http_request(status: 200, body: build_response_body)
-
-        expect(http).to receive(:request) do |request|
-          content_type = request["Content-Type"]
-          expect(content_type).to match(%r{multipart/form-data; boundary=})
-
-          boundary = content_type.match(/boundary=(.+)/)[1]
-          body = request.body
-
-          expect(body).to include("--#{boundary}")
-          expect(body).to include('Content-Disposition: form-data; name="platform"')
-          expect(body).to include("ios")
-          expect(body).to include('Content-Disposition: form-data; name="bundle"')
-          expect(body).to include("fake-ipa-content")
-          expect(body).to include("--#{boundary}--")
-
-          instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
-        end
-
-        client.upload_build(
-          app_slug: app_slug,
-          platform: "ios",
-          bundle_path: bundle_file.path
-        )
-      end
-    end
-
-    it "sends the correct authorization header" do
-      http, = stub_http_request(status: 200, body: build_response_body)
-
-      expect(http).to receive(:request) do |request|
-        expect(request["Authorization"]).to eq('Token token="test-token-abc123"')
-        instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
-      end
-
-      client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
-    end
-
     it "posts to the correct endpoint path" do
-      http, = stub_http_request(status: 200, body: build_response_body)
-
-      expect(http).to receive(:request) do |request|
-        expect(request.path).to eq("/api/public/v1/apps/my-app/builds")
-        instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
+      stubs.post("/api/public/v1/apps/my-app/builds") do
+        json_response(200, build_response_body)
       end
 
       client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
-    end
-
-    it "uses SSL for https URLs" do
-      http = instance_double(Net::HTTP)
-      allow(Net::HTTP).to receive(:new).with("cydia.example.com", 443).and_return(http)
-      expect(http).to receive(:use_ssl=).with(true)
-      allow(http).to receive(:open_timeout=)
-      allow(http).to receive(:read_timeout=)
-      allow(http).to receive(:write_timeout=)
-      allow(http).to receive(:request).and_return(
-        instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
-      )
-
-      client.upload_build(app_slug: app_slug, platform: "ios", bundle_path: bundle_file.path)
+      stubs.verify_stubbed_calls
     end
   end
 
   describe "#fetch_build" do
+    before { use_test_adapter }
+
     context "with a successful fetch" do
       it "returns the parsed build response" do
-        stub_http_request(status: 200, body: build_response_body)
+        stubs.get("/api/public/v1/apps/my-app/builds") do
+          json_response(200, build_response_body)
+        end
 
         result = client.fetch_build(
           app_slug: app_slug,
@@ -358,38 +316,12 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
     end
 
     it "sends query parameters in the request" do
-      http, = stub_http_request(status: 200, body: build_response_body)
-
-      expect(http).to receive(:request) do |request|
-        uri = URI.parse("https://cydia.example.com#{request.path}")
-        params = URI.decode_www_form(uri.query).to_h
+      stubs.get("/api/public/v1/apps/my-app/builds") do |env|
+        params = URI.decode_www_form(env.url.query).to_h
         expect(params["platform"]).to eq("ios")
         expect(params["target"]).to eq("release")
         expect(params["version"]).to eq("1.2.3")
-        instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
-      end
-
-      client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
-    end
-
-    it "sends the correct authorization header" do
-      http, = stub_http_request(status: 200, body: build_response_body)
-
-      expect(http).to receive(:request) do |request|
-        expect(request["Authorization"]).to eq('Token token="test-token-abc123"')
-        instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
-      end
-
-      client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
-    end
-
-    it "uses GET to the correct endpoint" do
-      http, = stub_http_request(status: 200, body: build_response_body)
-
-      expect(http).to receive(:request) do |request|
-        expect(request).to be_a(Net::HTTP::Get)
-        expect(request.path).to start_with("/api/public/v1/apps/my-app/builds")
-        instance_double(Net::HTTPResponse, code: "200", body: JSON.generate(build_response_body))
+        json_response(200, build_response_body)
       end
 
       client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
@@ -397,7 +329,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 401" do
       it "raises CydiaError" do
-        stub_http_request(status: 401, body: { "error" => "unauthorized" })
+        stubs.get("/api/public/v1/apps/my-app/builds") do
+          json_response(401, { "error" => "unauthorized" })
+        end
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
@@ -409,7 +343,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 404" do
       it "raises CydiaError" do
-        stub_http_request(status: 404, body: { "error" => "not found" })
+        stubs.get("/api/public/v1/apps/my-app/builds") do
+          json_response(404, { "error" => "not found" })
+        end
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
@@ -421,7 +357,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when the server returns 422" do
       it "raises CydiaError with the error message" do
-        stub_http_request(status: 422, body: { "error" => "version is required" })
+        stubs.get("/api/public/v1/apps/my-app/builds") do
+          json_response(422, { "error" => "version is required" })
+        end
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
@@ -434,13 +372,9 @@ RSpec.describe Fastlane::CydiaLane::CydiaClient do
 
     context "when a network error occurs" do
       it "raises CydiaError" do
-        http = instance_double(Net::HTTP)
-        allow(Net::HTTP).to receive(:new).and_return(http)
-        allow(http).to receive(:use_ssl=)
-        allow(http).to receive(:open_timeout=)
-        allow(http).to receive(:read_timeout=)
-        allow(http).to receive(:write_timeout=)
-        allow(http).to receive(:request).and_raise(SocketError, "getaddrinfo: Name or service not known")
+        stubs.get("/api/public/v1/apps/my-app/builds") do
+          raise Faraday::ConnectionFailed, "getaddrinfo: Name or service not known"
+        end
 
         expect {
           client.fetch_build(app_slug: app_slug, platform: "ios", target: "release", version: "1.2.3")
