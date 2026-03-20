@@ -1,0 +1,12 @@
+
+# ralphex progress logs
+.ralphex/progress/
+
+# Ruby / Bundler
+/.ruby-local/
+/coverage/
+/.rubocop-cache/
+Gemfile.lock
+
+# Development
+/run.sh
