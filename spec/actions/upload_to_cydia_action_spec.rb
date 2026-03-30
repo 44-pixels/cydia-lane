@@ -312,6 +312,35 @@ RSpec.describe Fastlane::Actions::UploadToCydiaAction do
     end
   end
 
+  describe ".formatted_file_size" do
+    it "formats bytes" do
+      file = Tempfile.new("tiny")
+      file.write("x" * 500)
+      file.flush
+      expect(described_class.formatted_file_size(file.path)).to eq("500 B")
+      file.close
+      file.unlink
+    end
+
+    it "formats kilobytes" do
+      file = Tempfile.new("medium")
+      file.write("x" * 2048)
+      file.flush
+      expect(described_class.formatted_file_size(file.path)).to eq("2.0 KB")
+      file.close
+      file.unlink
+    end
+
+    it "formats megabytes" do
+      file = Tempfile.new("large")
+      file.write("x" * (2 * 1024 * 1024))
+      file.flush
+      expect(described_class.formatted_file_size(file.path)).to eq("2.0 MB")
+      file.close
+      file.unlink
+    end
+  end
+
   describe ".detect_file" do
     it "returns GRADLE_APK_OUTPUT_PATH for android platform" do
       Fastlane::Actions.lane_context[:GRADLE_APK_OUTPUT_PATH] = "/path/to/app.apk"
