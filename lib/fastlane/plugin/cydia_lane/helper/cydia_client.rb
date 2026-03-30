@@ -13,6 +13,7 @@ module Fastlane
       end
 
       def upload_build(app_slug:, platform:, bundle_path:, symbol_path: nil, source_map_path: nil, backdoors_path: nil)
+        endpoint = builds_path(app_slug)
         payload = {
           platform: platform,
           bundle: Faraday::FilePart.new(bundle_path, "application/octet-stream")
@@ -21,17 +22,22 @@ module Fastlane
         payload[:reactSourceMap] = Faraday::FilePart.new(source_map_path, "application/octet-stream") if source_map_path
         payload[:backdoors] = Faraday::FilePart.new(backdoors_path, "application/octet-stream") if backdoors_path
 
-        response = connection.post(builds_path(app_slug), payload)
+        UI.verbose("POST #{@base_url}#{endpoint}")
+        response = connection.post(endpoint, payload)
+        UI.verbose("Response: HTTP #{response.status}")
         handle_response(response)
       rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
-        raise CydiaError, "Network error: #{e.message}"
+        raise CydiaError, "Network error connecting to #{@base_url}#{endpoint}: #{e.message}"
       end
 
       def fetch_build(app_slug:, platform:, target:, version:)
-        response = connection.get(builds_path(app_slug), platform: platform, target: target, version: version)
+        endpoint = builds_path(app_slug)
+        UI.verbose("GET #{@base_url}#{endpoint}")
+        response = connection.get(endpoint, platform: platform, target: target, version: version)
+        UI.verbose("Response: HTTP #{response.status}")
         handle_response(response)
       rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
-        raise CydiaError, "Network error: #{e.message}"
+        raise CydiaError, "Network error connecting to #{@base_url}#{endpoint}: #{e.message}"
       end
 
       private
